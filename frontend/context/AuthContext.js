@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { authAPI } from '../lib/api';
+import { getSocket, disconnectSocket, reconnectSocket } from '../lib/socket';
 
 const AuthContext = createContext();
 
@@ -22,6 +23,8 @@ export const AuthProvider = ({ children }) => {
 
     if (token && savedUser) {
       setUser(JSON.parse(savedUser));
+      // Initialize WebSocket connection
+      getSocket();
     }
     setLoading(false);
   }, []);
@@ -34,6 +37,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(user));
     setUser(user);
 
+    // Initialize WebSocket connection
+    reconnectSocket();
+
     return response.data;
   };
 
@@ -45,6 +51,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(user));
     setUser(user);
 
+    // Initialize WebSocket connection
+    reconnectSocket();
+
     return response.data;
   };
 
@@ -52,6 +61,9 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+
+    // Disconnect WebSocket
+    disconnectSocket();
   };
 
   const value = {

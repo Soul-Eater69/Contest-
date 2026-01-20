@@ -59,6 +59,24 @@ npm start
 - `GET /api/contests/:id/leaderboard` - Get contest leaderboard
 - `GET /api/contests/:id/participation` - Get my participation status (protected)
 
+### WebSocket Events
+
+The server supports real-time updates via WebSockets:
+
+**Client to Server:**
+- `joinContestLeaderboard` - Join a contest's leaderboard room
+- `leaveContestLeaderboard` - Leave a contest's leaderboard room
+- `contestSubmitted` - Notify server of contest submission
+- `userJoinedContest` - Notify when user joins contest
+- `userStartedContest` - Notify when user starts contest
+
+**Server to Client:**
+- `leaderboardUpdate` - Real-time leaderboard updates
+- `participantCountUpdate` - Live viewer count updates
+- `contestParticipantUpdate` - Contest participant count changes
+- `userActivity` - User activity notifications
+- `error` - Error messages
+
 ## Models
 
 ### User

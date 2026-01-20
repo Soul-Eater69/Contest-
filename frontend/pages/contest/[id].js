@@ -4,6 +4,7 @@ import Layout from '../../components/Layout';
 import { contestAPI } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { format } from 'date-fns';
+import { getSocket } from '../../lib/socket';
 
 export default function ContestDetail() {
   const router = useRouter();
@@ -53,6 +54,12 @@ export default function ContestDetail() {
     try {
       await contestAPI.joinContest(id);
       fetchParticipation();
+
+      // Emit WebSocket event
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('userJoinedContest', { contestId: id });
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to join contest');
     } finally {
@@ -65,6 +72,16 @@ export default function ContestDetail() {
     setActionLoading(true);
     try {
       await contestAPI.startContest(id);
+
+      // Emit WebSocket event
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('userStartedContest', {
+          contestId: id,
+          username: JSON.parse(localStorage.getItem('user'))?.username
+        });
+      }
+
       router.push(`/contest/${id}/take`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to start contest');

@@ -2,6 +2,7 @@ const Contest = require('../models/Contest');
 const Participant = require('../models/Participant');
 const Result = require('../models/Result');
 const { validationResult } = require('express-validator');
+const wsManager = require('../websocket/WebSocketManager');
 
 // Create Contest
 exports.createContest = async (req, res) => {
@@ -287,6 +288,17 @@ exports.submitContest = async (req, res) => {
     await updateRankings(contest._id);
 
     const updatedResult = await Result.findById(result._id).populate('user', 'username');
+
+    // Emit real-time leaderboard update via WebSocket
+    const leaderboard = await Result.find({ contest: contest._id })
+      .populate('user', 'username email')
+      .sort({ totalScore: -1, timeTaken: 1 })
+      .select('-answers');
+
+    wsManager.broadcastToContest(contest._id.toString(), 'leaderboardUpdate', {
+      contestId: contest._id.toString(),
+      leaderboard
+    });
 
     res.json({
       message: 'Contest submitted successfully',

@@ -120,6 +120,7 @@ PORT=5000
 MONGODB_URI=mongodb://localhost:27017/contest-app
 JWT_SECRET=your_secure_secret_key_change_this
 NODE_ENV=development
+CLIENT_URL=http://localhost:3000
 ```
 
 5. Start the backend server:
@@ -218,20 +219,36 @@ The leaderboard implements custom polling logic (without socket.io rooms):
 - `GET /api/contests/:id/leaderboard` - Get leaderboard
 - `GET /api/contests/:id/participation` - Get participation status (protected)
 
-## Real-time Updates Without Socket.io
+## Real-time Updates with WebSockets
 
-The application implements real-time updates using a polling mechanism:
+The application implements true real-time updates using WebSockets with custom room management logic:
 
-1. **Leaderboard Auto-refresh**: The leaderboard page polls the API every 5 seconds
-2. **Contest Status Updates**: Contest status is updated on each API request
-3. **Participation Tracking**: Server tracks participant state (joined, started, completed)
-4. **Client-side Timer**: Quiz timer runs on the client with server-side validation
+### Features:
+1. **Real-time Leaderboard**: Instantly updates when users submit their contest answers
+2. **Live Participant Count**: See how many users are viewing the leaderboard
+3. **User Activity Tracking**: Real-time notifications when users join or start contests
+4. **Custom Room Logic**: Built with socket.io but implements custom participant management (not using socket.io's built-in rooms)
+
+### WebSocket Events:
+- **joinContestLeaderboard**: User joins a contest's leaderboard view
+- **leaderboardUpdate**: Broadcast when new submissions arrive
+- **participantCountUpdate**: Updates viewer count
+- **userJoinedContest**: Notifies when user joins contest
+- **userStartedContest**: Notifies when user starts taking quiz
+- **contestSubmitted**: Triggers leaderboard recalculation
+
+### Implementation Details:
+- Custom WebSocketManager class manages participants per contest
+- Map-based storage for socket-to-contest relationships
+- Efficient broadcasting to specific contest participants
+- Automatic cleanup on disconnect
+- JWT authentication for WebSocket connections
 
 This approach provides:
-- Simple implementation without WebSocket complexity
-- Better scalability for read-heavy operations
-- No need for persistent connections
-- Works well with serverless deployments
+- Instant updates across all connected clients
+- Efficient real-time communication
+- Better user experience during live contests
+- Scalable custom room implementation
 
 ## Security Features
 

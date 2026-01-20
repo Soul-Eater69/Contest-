@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import { contestAPI } from '../../../lib/api';
 import { useAuth } from '../../../context/AuthContext';
+import { getSocket } from '../../../lib/socket';
 
 export default function TakeContest() {
   const router = useRouter();
@@ -82,6 +83,12 @@ export default function TakeContest() {
         answers: formattedAnswers,
         timeTaken,
       });
+
+      // Emit WebSocket event for real-time leaderboard update
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('contestSubmitted', { contestId: id });
+      }
 
       router.push(`/contest/${id}`);
     } catch (err) {

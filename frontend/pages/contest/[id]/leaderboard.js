@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import { contestAPI } from '../../../lib/api';
 import { format } from 'date-fns';
+import { getSocket } from '../../../lib/socket';
 
 export default function Leaderboard() {
   const router = useRouter();
@@ -11,7 +12,9 @@ export default function Leaderboard() {
   const [contest, setContest] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [realTimeEnabled, setRealTimeEnabled] = useState(true);
+  const [participantCount, setParticipantCount] = useState(0);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -19,15 +22,47 @@ export default function Leaderboard() {
     }
   }, [id]);
 
+  // WebSocket real-time updates
   useEffect(() => {
-    if (!autoRefresh || !id) return;
+    if (!id || !realTimeEnabled) return;
 
-    const interval = setInterval(() => {
-      fetchLeaderboard();
-    }, 5000); // Refresh every 5 seconds
+    const socket = getSocket();
+    if (!socket) return;
 
-    return () => clearInterval(interval);
-  }, [id, autoRefresh]);
+    setIsConnected(true);
+
+    // Join contest leaderboard
+    socket.emit('joinContestLeaderboard', { contestId: id });
+
+    // Listen for leaderboard updates
+    socket.on('leaderboardUpdate', (data) => {
+      if (data.contestId === id) {
+        setLeaderboard(data.leaderboard);
+        console.log('Leaderboard updated in real-time');
+      }
+    });
+
+    // Listen for participant count updates
+    socket.on('participantCountUpdate', (data) => {
+      setParticipantCount(data.count);
+    });
+
+    // Listen for user activity
+    socket.on('userActivity', (data) => {
+      if (data.contestId === id) {
+        console.log(`${data.username} ${data.activity} the contest`);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.emit('leaveContestLeaderboard', { contestId: id });
+      socket.off('leaderboardUpdate');
+      socket.off('participantCountUpdate');
+      socket.off('userActivity');
+      setIsConnected(false);
+    };
+  }, [id, realTimeEnabled]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -90,14 +125,30 @@ export default function Leaderboard() {
               )}
             </div>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <input
-                  type="checkbox"
-                  checked={autoRefresh}
-                  onChange={(e) => setAutoRefresh(e.target.checked)}
-                />
-                Auto-refresh
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: isConnected && realTimeEnabled ? '#28a745' : '#dc3545',
+                    display: 'inline-block'
+                  }}
+                ></span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={realTimeEnabled}
+                    onChange={(e) => setRealTimeEnabled(e.target.checked)}
+                  />
+                  Real-time Updates
+                </label>
+              </div>
+              {participantCount > 0 && (
+                <span style={{ color: '#666', fontSize: '14px' }}>
+                  {participantCount} watching
+                </span>
+              )}
               <button onClick={() => router.push(`/contest/${id}`)} className="btn btn-secondary">
                 Back to Contest
               </button>
